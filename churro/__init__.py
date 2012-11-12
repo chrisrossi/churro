@@ -126,6 +126,23 @@ class Persistent(object):
             node._dirty = True
             node = getattr(node, '__parent__', None)
 
+    def _serialize(self, stream):
+        data = {}
+        for cls in type(self).mro():
+            for name, prop in cls.__dict__.items():
+                if not isinstance(prop, PersistentProperty):
+                    continue
+                if name not in data:
+                    data[name] = prop.to_json(prop.__get__(self))
+        json.dump(data, stream)
+
+    def _marshal(self, stream):
+        cls = type(self)
+        data = json.load(stream)
+        for name, value in data.items():
+            prop = getattr(cls, name)
+            prop.__set__(self, prop.from_json(value))
+
 
 class PersistentFolder(Persistent):
 
@@ -298,23 +315,15 @@ def _marshal(stream):
     dotted_name = unicode(next(stream), 'utf8').strip()
     cls = _resolve_dotted_name(dotted_name)
     obj = cls.__new__(cls)
-    data = json.load(stream)
-    for name, value in data.items():
-        prop = getattr(cls, name)
-        prop.__set__(obj, prop.from_json(value))
+    obj._marshal(stream)
     return obj
 
 
 def _serialize(obj, stream):
     cls = type(obj)
     dotted_name = '%s.%s\n' % (cls.__module__, cls.__name__)
-    data = {}
-    for name, prop in cls.__dict__.items():
-        if not isinstance(prop, PersistentProperty):
-            continue
-        data[name] = prop.to_json(prop.__get__(obj))
     stream.write(dotted_name.encode('utf8'))
-    json.dump(data, stream)
+    obj._serialize(stream)
 
 
 def _resolve_dotted_name(name):
