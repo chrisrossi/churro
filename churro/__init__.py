@@ -122,7 +122,7 @@ class Persistent(object):
 
     def set_dirty(self):
         node = self
-        while node:
+        while node is not None:
             node._dirty = True
             node = getattr(node, '__parent__', None)
 
@@ -150,7 +150,10 @@ class PersistentFolder(Persistent):
     def _contents(self):
         contents = {}
         fs = self._fs
-        with fs.cd(resource_path(self)):
+        path = resource_path(self)
+        if not fs.exists(path):
+            return contents
+        with fs.cd(path):
             for fname in fs.listdir():
                 if fs.isdir(fname):
                     folder_data = '%s/%s' % (fname, CHURRO_FOLDER)
@@ -204,6 +207,7 @@ class PersistentFolder(Persistent):
             obj = _marshal(self._fs.open(fspath, 'rb'))
             obj.__parent__ = self
             obj.__name__ = name
+            obj._fs = self._fs
             contents[name] = (type, obj)
         return obj
 
@@ -215,6 +219,7 @@ class PersistentFolder(Persistent):
         self._contents[name] = (type, other)
         other.__parent__ = self
         other.__name__ = name
+        other._fs = self._fs
         _set_dirty(other)
 
     def __delitem__(self, name):
@@ -226,6 +231,10 @@ class PersistentFolder(Persistent):
         pass
 
     def _save(self):
+        fs = self._fs
+        path = resource_path(self)
+        if not fs.exists(path):
+            fs.mkdir(path)
         for name, (type, obj) in self._contents.items():
             if obj is None:
                 continue
@@ -233,10 +242,10 @@ class PersistentFolder(Persistent):
                 obj._save()
             else:
                 fspath = resource_path(obj) + CHURRO_EXT
-                _serialize(obj, self._fs.open(fspath, 'wb'))
+                _serialize(obj, fs.open(fspath, 'wb'))
                 obj._dirty = False
-        fspath = '%s/%s' % (resource_path(self), CHURRO_FOLDER)
-        _serialize(self, self._fs.open(fspath, 'wb'))
+        fspath = '%s/%s' % (path, CHURRO_FOLDER)
+        _serialize(self, fs.open(fspath, 'wb'))
         self._dirty = False
 
     #def __repr__(self):
@@ -351,6 +360,6 @@ def resource_path(obj):
 
 
 def _set_dirty(obj):
-    while obj:
+    while obj is not None:
         obj._dirty = True
         obj = obj.__parent__
