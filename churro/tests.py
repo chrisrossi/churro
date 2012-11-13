@@ -54,7 +54,9 @@ class ChurroTests(unittest.TestCase):
         repo = self.make_one()
         root = repo.root()
         folder = TestFolder('uno', 'dos')
+        self.assertEqual(len(folder), 0)
         root['folder'] = folder
+        self.assertEqual(len(folder), 0)
         obj = TestClass('foo', 'bar')
         folder['test'] = obj
         transaction.commit()
@@ -77,6 +79,40 @@ class ChurroTests(unittest.TestCase):
         self.assertEqual(folder.one, 'un')
         obj = folder['test']
         self.assertEqual(obj.two, 'deux')
+
+    def test_folder_ops(self):
+        repo = self.make_one()
+        root = repo.root()
+        self.assertFalse(bool(root))
+        root['a'] = a = TestClass('a', 'b')
+        root['b'] = b = TestClass('c', 'd')
+
+        self.assertEqual(len(root), 2)
+        self.assertEqual(root.keys(), ['a', 'b'])
+        self.assertEqual(list(iter(root)), ['a', 'b'])
+        self.assertEqual(list(root.values()), [a, b])
+        self.assertEqual(list(root.items()), [('a', a), ('b', b)])
+        self.assertTrue(bool(root))
+        self.assertIn('a', root)
+
+        transaction.commit()
+        repo = self.make_one()
+        root = repo.root()
+
+        self.assertEqual(len(root), 2)
+        self.assertEqual(list(root.values()), [root['a'], root['b']])
+        self.assertEqual(list(root.items()), [
+            ('a', root['a']), ('b', root['b'])])
+        self.assertEqual(root.keys(), ['a', 'b'])
+        self.assertEqual(list(iter(root)), ['a', 'b'])
+        self.assertTrue(bool(root))
+        self.assertIn('a', root)
+
+        root['c'] = TestFolder('e', 'f')
+        self.assertEqual(len(root['c']), 0)
+
+        with self.assertRaises(KeyError):
+            root['d']
 
 
 class TestClass(churro.Persistent):

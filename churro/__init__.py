@@ -119,6 +119,9 @@ class PersistentProperty(object):
 class Persistent(object):
     __metaclass__ = PersistentType
     _dirty = True
+    __name__ = None
+    __parent__ = None
+    _fs = None
 
     def set_dirty(self):
         node = self
@@ -150,11 +153,15 @@ class PersistentFolder(Persistent):
     def _contents(self):
         contents = {}
         fs = self._fs
+        if fs is None:
+            return contents
         path = resource_path(self)
         if not fs.exists(path):
             return contents
         with fs.cd(path):
             for fname in fs.listdir():
+                if fname == CHURRO_FOLDER:
+                    continue
                 if fs.isdir(fname):
                     folder_data = '%s/%s' % (fname, CHURRO_FOLDER)
                     if fs.exists(folder_data):
@@ -167,18 +174,19 @@ class PersistentFolder(Persistent):
         return self._contents.keys()
 
     def values(self):
-        contents = self._contents
-        for name, (type, obj) in self._contents.items():
-            if obj is None:
-                obj = self._load(type, name)
-                contents[name] = (type, obj)
-            yield obj
+        for name, value in self.items():
+            yield value
 
     def __iter__(self):
         return iter(self._contents.keys())
 
     def items(self):
-        pass
+        contents = self._contents
+        for name, (type, obj) in self._contents.items():
+            if obj is None:
+                obj = self._load(name, type)
+                contents[name] = (type, obj)
+            yield name, obj
 
     def __len__(self):
         return len(self._contents)
@@ -199,16 +207,20 @@ class PersistentFolder(Persistent):
             return default
         type, obj = objref
         if obj is None:
-            here = resource_path(self)
-            if type == 'folder':
-                fspath = '%s/%s/%s' % (here, name, CHURRO_FOLDER)
-            else:
-                fspath = '%s/%s%s' % (here, name, CHURRO_EXT)
-            obj = _marshal(self._fs.open(fspath, 'rb'))
-            obj.__parent__ = self
-            obj.__name__ = name
-            obj._fs = self._fs
+            obj = self._load(name, type)
             contents[name] = (type, obj)
+        return obj
+
+    def _load(self, name, type):
+        here = resource_path(self)
+        if type == 'folder':
+            fspath = '%s/%s/%s' % (here, name, CHURRO_FOLDER)
+        else:
+            fspath = '%s/%s%s' % (here, name, CHURRO_EXT)
+        obj = _marshal(self._fs.open(fspath, 'rb'))
+        obj.__parent__ = self
+        obj.__name__ = name
+        obj._fs = self._fs
         return obj
 
     def __contains__(self, name):
