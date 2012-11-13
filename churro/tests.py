@@ -1,6 +1,6 @@
 try:
     import unittest2 as unittest
-    unittest # stfu pyflakes
+    unittest # pragma no cover stfu pyflakes
 except ImportError:
     import unittest
 
@@ -31,6 +31,7 @@ class ChurroTests(unittest.TestCase):
     def test_save_and_retrieve_one_object(self):
         repo = self.make_one()
         root = repo.root()
+        self.assertEqual(repo.root(), root)
         obj = TestClass('foo', 'bar')
         root['test'] = obj
         self.assertIs(root['test'], obj)
@@ -179,6 +180,18 @@ class ChurroTests(unittest.TestCase):
         root = repo.root()
         self.assertNotIn('a', root)
         transaction.commit() # coverage
+
+
+class TestDottedNameResolver(unittest.TestCase):
+
+    def call_fut(self, name):
+        from churro import _resolve_dotted_name as fut
+        return fut(name)
+
+    def test_it(self):
+        C = self.call_fut('email.message.Message')
+        from email.message import Message
+        self.assertEqual(C, Message)
 
 
 class TestClass(churro.Persistent):
