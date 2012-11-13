@@ -178,6 +178,7 @@ class ChurroTests(unittest.TestCase):
         repo = self.make_one()
         root = repo.root()
         self.assertNotIn('a', root)
+        transaction.commit() # coverage
 
 
 class TestClass(churro.Persistent):

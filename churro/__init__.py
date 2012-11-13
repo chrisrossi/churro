@@ -224,6 +224,7 @@ class PersistentFolder(Persistent):
         obj.__parent__ = self
         obj.__name__ = name
         obj._fs = self._fs
+        obj._dirty = False
         if cache:
             self._contents[name] = (type, obj)
         return obj
@@ -265,6 +266,7 @@ class PersistentFolder(Persistent):
             if obj is _removed:
                 return None
             contents[name] = (type, _removed)
+            _set_dirty(self)
         return objref
 
     def _save(self):
@@ -309,6 +311,8 @@ class _Session(object):
         """
         self.close()
 
+    tpc_abort = abort
+
     def tpc_begin(self, tx):
         """
         Part of datamanager API.
@@ -335,12 +339,6 @@ class _Session(object):
         Part of datamanager API.
         """
 
-    def tpc_abort(self, tx):
-        """
-        Part of datamanager API.
-        """
-        self.close()
-
     def sortKey(self):
         return 'Churro'
 
@@ -355,6 +353,7 @@ class _Session(object):
         path = '/' + CHURRO_FOLDER
         if fs.exists(path):
             root = _marshal(fs.open(path, 'rb'))
+            root._dirty = False
         else:
             root = factory()
         root._fs = fs
