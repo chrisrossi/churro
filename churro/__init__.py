@@ -60,6 +60,7 @@ class Churro(object):
 
 
 _marker = object()
+_removed = object()
 
 
 class reify(object):
@@ -170,29 +171,33 @@ class PersistentFolder(Persistent):
                     contents[fname[:-7]] = ('object', None)
         return contents
 
+    @property
+    def _filtered_contents(self):
+        return {name: (type, obj) for name, (type, obj)
+                in self._contents.items() if obj is not _removed}
+
     def keys(self):
-        return self._contents.keys()
+        return self._filtered_contents.keys()
 
     def values(self):
         for name, value in self.items():
             yield value
 
     def __iter__(self):
-        return iter(self._contents.keys())
+        return iter(self._filtered_contents.keys())
 
     def items(self):
-        contents = self._contents
-        for name, (type, obj) in self._contents.items():
+        contents = self._filtered_contents
+        for name, (type, obj) in contents.items():
             if obj is None:
                 obj = self._load(name, type)
-                contents[name] = (type, obj)
             yield name, obj
 
     def __len__(self):
-        return len(self._contents)
+        return len(self._filtered_contents)
 
     def __nonzero__(self):
-        return bool(self._contents)
+        return bool(self._filtered_contents)
 
     def __getitem__(self, name):
         obj = self.get(name, _marker)
@@ -201,26 +206,26 @@ class PersistentFolder(Persistent):
         return obj
 
     def get(self, name, default=None):
-        contents = self._contents
+        contents = self._filtered_contents
         objref = contents.get(name)
         if not objref:
             return default
         type, obj = objref
         if obj is None:
             obj = self._load(name, type)
-            contents[name] = (type, obj)
         return obj
 
-    def _load(self, name, type):
-        here = resource_path(self)
+    def _load(self, name, type, cache=True):
         if type == 'folder':
-            fspath = '%s/%s/%s' % (here, name, CHURRO_FOLDER)
+            fspath = resource_path(self, name, CHURRO_FOLDER)
         else:
-            fspath = '%s/%s%s' % (here, name, CHURRO_EXT)
+            fspath = resource_path(self, name) + CHURRO_EXT
         obj = _marshal(self._fs.open(fspath, 'rb'))
         obj.__parent__ = self
         obj.__name__ = name
         obj._fs = self._fs
+        if cache:
+            self._contents[name] = (type, obj)
         return obj
 
     def __contains__(self, name):
@@ -235,12 +240,32 @@ class PersistentFolder(Persistent):
         _set_dirty(other)
 
     def __delitem__(self, name):
-        pass
+        if not self._remove(name):
+            raise KeyError(name)
 
     remove = __delitem__
 
     def pop(self, name, default=_marker):
-        pass
+        objref = self._remove(name)
+        if not objref:
+            if default is _marker:
+                raise KeyError(name)
+            return default
+
+        type, obj = objref
+        if obj:
+            return obj
+        return self._load(name, type, False)
+
+    def _remove(self, name):
+        contents = self._contents
+        objref = contents.get(name)
+        if objref:
+            type, obj = objref
+            if obj is _removed:
+                return None
+            contents[name] = (type, _removed)
+        return objref
 
     def _save(self):
         fs = self._fs
@@ -251,11 +276,17 @@ class PersistentFolder(Persistent):
             if obj is None:
                 continue
             if type == 'folder':
-                obj._save()
+                if obj is _removed:
+                    fs.rmtree(resource_path(self, name))
+                else:
+                    obj._save()
             else:
-                fspath = resource_path(obj) + CHURRO_EXT
-                _serialize(obj, fs.open(fspath, 'wb'))
-                obj._dirty = False
+                fspath = resource_path(self, name) + CHURRO_EXT
+                if obj is _removed:
+                    fs.rm(fspath)
+                else:
+                    _serialize(obj, fs.open(fspath, 'wb'))
+                    obj._dirty = False
         fspath = '%s/%s' % (path, CHURRO_FOLDER)
         _serialize(self, fs.open(fspath, 'wb'))
         self._dirty = False
@@ -362,13 +393,16 @@ def _resolve_dotted_name(name):
     return target
 
 
-def resource_path(obj):
+def resource_path(obj, *elements):
     def _inner(obj, path):
         if obj.__parent__ is not None:
             _inner(obj.__parent__, path)
             path.append(obj.__name__)
         return path
-    return '/' + '/'.join(_inner(obj, []))
+    path = _inner(obj, [])
+    if elements:
+        path.extend(elements)
+    return '/' + '/'.join(path)
 
 
 def _set_dirty(obj):

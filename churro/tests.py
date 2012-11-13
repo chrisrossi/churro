@@ -114,6 +114,71 @@ class ChurroTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             root['d']
 
+    def test_delete(self):
+        repo = self.make_one()
+        root = repo.root()
+        root['a'] = TestClass('a', 'b')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        self.assertIn('a', root)
+        del root['a']
+        self.assertNotIn('a', root)
+        with self.assertRaises(KeyError):
+            del root['a']
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        self.assertNotIn('a', root)
+        with self.assertRaises(KeyError):
+            del root['a']
+
+    def test_pop(self):
+        repo = self.make_one()
+        root = repo.root()
+        root['a'] = TestClass('a', 'b')
+        root['b'] = TestClass('c', 'd')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        self.assertIn('a', root)
+        a = root['a']
+        self.assertIs(root.pop('a'), a)
+        self.assertNotIn('a', root)
+        with self.assertRaises(KeyError):
+            root.pop('a')
+        self.assertEqual(root.pop('a', None), None)
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        self.assertNotIn('a', root)
+        with self.assertRaises(KeyError):
+            root.pop('a')
+        self.assertEqual(root.pop('a', None), None)
+        self.assertEqual(root.pop('b').one, 'c')
+
+    def test_remove_folder(self):
+        repo = self.make_one()
+        root = repo.root()
+        root['a'] = TestFolder('a', 'b')
+        root['a']['b'] = TestFolder('c', 'd')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        self.assertIn('a', root)
+        del root['a']
+        self.assertNotIn('a', root)
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        self.assertNotIn('a', root)
+
 
 class TestClass(churro.Persistent):
     one = churro.PersistentProperty()
