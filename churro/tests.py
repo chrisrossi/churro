@@ -181,6 +181,37 @@ class ChurroTests(unittest.TestCase):
         self.assertNotIn('a', root)
         transaction.commit() # coverage
 
+    def test_deep_structure(self):
+        repo = self.make_one()
+        root = repo.root()
+        obj = TestClass('foo', TestClass('bar', 'baz'))
+        root['uhoh'] = obj
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['uhoh']
+        self.assertEqual(obj.one, 'foo')
+        self.assertEqual(obj.two.one, 'bar')
+        self.assertEqual(obj.two.two, 'baz')
+        obj.two.one = 'bozo'
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['uhoh']
+        self.assertEqual(obj.one, 'foo')
+        self.assertEqual(obj.two.one, 'bozo')
+        self.assertEqual(obj.two.two, 'baz')
+
+    def test_not_serializable(self):
+        repo = self.make_one()
+        root = repo.root()
+        obj = TestClass('foo', NotSerializable())
+        root['oops'] = obj
+        with self.assertRaises(ValueError):
+            transaction.commit()
+
 
 class TestDottedNameResolver(unittest.TestCase):
 
@@ -206,3 +237,6 @@ class TestClass(churro.Persistent):
 class TestFolder(churro.PersistentFolder, TestClass):
     pass
 
+
+class NotSerializable(object):
+    """Nuh uh, no way."""

@@ -82,6 +82,51 @@ class reify(object):
         return val
 
 
+class JsonCodec(object):
+    """
+    Encodes/decodes Python objects as JSON.
+    """
+    @staticmethod
+    def encode_hook(obj):
+        if not isinstance(obj, Persistent):
+            return obj
+
+        cls = type(obj)
+        dotted_name = '%s.%s' % (cls.__module__, cls.__name__)
+        data = {}
+        for member in cls.mro():
+            for name, prop in member.__dict__.items():
+                if not isinstance(prop, PersistentProperty):
+                    continue
+                if name not in data:
+                    data[name] = prop.to_json(prop.__get__(obj))
+        return {
+            '__churro_class__': dotted_name,
+            '__churro_data__': data}
+
+    def encode(self, obj, stream):
+        json.dump(obj, stream, default=self.encode_hook, indent=4)
+
+    @staticmethod
+    def decode_hook(data):
+        if '__churro_class__' not in data:
+            return data
+
+        cls = _resolve_dotted_name(data['__churro_class__'])
+        obj = cls.__new__(cls)
+        for name, value in data['__churro_data__'].items():
+            prop = getattr(cls, name)
+            prop.__set__(obj, prop.from_json(value), False)
+
+        return obj
+
+    def decode(self, stream):
+        return json.load(stream, object_hook=self.decode_hook)
+
+
+codec = JsonCodec()
+
+
 class PersistentType(type):
 
     def __init__(cls, name, bases, members):
@@ -101,8 +146,11 @@ class PersistentProperty(object):
             return self
         return getattr(obj, self.attr)
 
-    def __set__(self, obj, value):
-        obj.set_dirty()
+    def __set__(self, obj, value, set_dirty=True):
+        if set_dirty:
+            obj.set_dirty()
+        if isinstance(value, Persistent):
+            value.__instance__ = obj.__instance__
         return setattr(obj, self.attr, self.validate(value))
 
     def from_json(self, value):
@@ -122,28 +170,16 @@ class Persistent(object):
     __parent__ = None
     _fs = None
 
+    def __new__(cls, *args, **kw):
+        obj = super(Persistent, cls).__new__(cls, *args, **kw)
+        obj.__instance__ = obj
+        return obj
+
     def set_dirty(self):
-        node = self
+        node = self.__instance__
         while node is not None:
             node._dirty = True
             node = getattr(node, '__parent__', None)
-
-    def _serialize(self, stream):
-        data = {}
-        for cls in type(self).mro():
-            for name, prop in cls.__dict__.items():
-                if not isinstance(prop, PersistentProperty):
-                    continue
-                if name not in data:
-                    data[name] = prop.to_json(prop.__get__(self))
-        json.dump(data, stream)
-
-    def _marshal(self, stream):
-        cls = type(self)
-        data = json.load(stream)
-        for name, value in data.items():
-            prop = getattr(cls, name)
-            prop.__set__(self, prop.from_json(value))
 
 
 class PersistentFolder(Persistent):
@@ -218,7 +254,7 @@ class PersistentFolder(Persistent):
             fspath = resource_path(self, name, CHURRO_FOLDER)
         else:
             fspath = resource_path(self, name) + CHURRO_EXT
-        obj = _marshal(self._fs.open(fspath, 'rb'))
+        obj = codec.decode(self._fs.open(fspath, 'rb'))
         obj.__parent__ = self
         obj.__name__ = name
         obj._fs = self._fs
@@ -285,10 +321,10 @@ class PersistentFolder(Persistent):
                 if obj is _removed:
                     fs.rm(fspath)
                 else:
-                    _serialize(obj, fs.open(fspath, 'wb'))
+                    codec.encode(obj, fs.open(fspath, 'wb'))
                     obj._dirty = False
         fspath = '%s/%s' % (path, CHURRO_FOLDER)
-        _serialize(self, fs.open(fspath, 'wb'))
+        codec.encode(self, fs.open(fspath, 'wb'))
         self._dirty = False
 
     #def __repr__(self):
@@ -350,7 +386,7 @@ class _Session(object):
         fs = self.fs
         path = '/' + CHURRO_FOLDER
         if fs.exists(path):
-            root = _marshal(fs.open(path, 'rb'))
+            root = codec.decode(fs.open(path, 'rb'))
             root._dirty = False
         else:
             root = factory()
@@ -358,21 +394,6 @@ class _Session(object):
         root.__name__ = root.__parent__ = None
         self.root = root
         return root
-
-
-def _marshal(stream):
-    dotted_name = unicode(next(stream), 'utf8').strip()
-    cls = _resolve_dotted_name(dotted_name)
-    obj = cls.__new__(cls)
-    obj._marshal(stream)
-    return obj
-
-
-def _serialize(obj, stream):
-    cls = type(obj)
-    dotted_name = '%s.%s\n' % (cls.__module__, cls.__name__)
-    stream.write(dotted_name.encode('utf8'))
-    obj._serialize(stream)
 
 
 def _resolve_dotted_name(name):
@@ -406,3 +427,6 @@ def _set_dirty(obj):
     while obj is not None:
         obj._dirty = True
         obj = obj.__parent__
+
+
+
