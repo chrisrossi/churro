@@ -1,9 +1,17 @@
 import acidfs
 import json
+import sys
 import transaction
 
 CHURRO_EXT = '.churro'
 CHURRO_FOLDER = '__folder__' + CHURRO_EXT
+
+if sys.version_info[0] == 2: # pragma NO COVER
+    DECODE_MODE = 'rb'
+    ENCODE_MODE = 'wb'
+else:  # pragma NO COVER
+    DECODE_MODE = 'r'
+    ENCODE_MODE = 'w'
 
 
 class Churro(object):
@@ -136,6 +144,9 @@ class PersistentType(type):
                 prop.set_name(name)
 
 
+PersistentBase = PersistentType('PersistentBase', (object,), {})
+
+
 class PersistentProperty(object):
 
     def set_name(self, name):
@@ -163,8 +174,7 @@ class PersistentProperty(object):
         return value
 
 
-class Persistent(object):
-    __metaclass__ = PersistentType
+class Persistent(PersistentBase):
     _dirty = True
     __name__ = None
     __parent__ = None
@@ -207,8 +217,8 @@ class PersistentFolder(Persistent):
 
     @property
     def _filtered_contents(self):
-        return {name: (type, obj) for name, (type, obj)
-                in self._contents.items() if obj is not _removed}
+        return dict([(name, (type, obj)) for name, (type, obj)
+                in self._contents.items() if obj is not _removed])
 
     def keys(self):
         return self._filtered_contents.keys()
@@ -254,7 +264,7 @@ class PersistentFolder(Persistent):
             fspath = resource_path(self, name, CHURRO_FOLDER)
         else:
             fspath = resource_path(self, name) + CHURRO_EXT
-        obj = codec.decode(self._fs.open(fspath, 'rb'))
+        obj = codec.decode(self._fs.open(fspath, DECODE_MODE))
         obj.__parent__ = self
         obj.__name__ = name
         obj._fs = self._fs
@@ -321,10 +331,10 @@ class PersistentFolder(Persistent):
                 if obj is _removed:
                     fs.rm(fspath)
                 else:
-                    codec.encode(obj, fs.open(fspath, 'wb'))
+                    codec.encode(obj, fs.open(fspath, ENCODE_MODE))
                     obj._dirty = False
         fspath = '%s/%s' % (path, CHURRO_FOLDER)
-        codec.encode(self, fs.open(fspath, 'wb'))
+        codec.encode(self, fs.open(fspath, ENCODE_MODE))
         self._dirty = False
 
     #def __repr__(self):
@@ -386,7 +396,7 @@ class _Session(object):
         fs = self.fs
         path = '/' + CHURRO_FOLDER
         if fs.exists(path):
-            root = codec.decode(fs.open(path, 'rb'))
+            root = codec.decode(fs.open(path, DECODE_MODE))
             root._dirty = False
         else:
             root = factory()

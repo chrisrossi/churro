@@ -1,7 +1,7 @@
 try:
     import unittest2 as unittest
     unittest # pragma no cover stfu pyflakes
-except ImportError:
+except ImportError:  # pragma no cover
     import unittest
 
 import churro
@@ -89,7 +89,7 @@ class ChurroTests(unittest.TestCase):
         root['b'] = b = TestClass('c', 'd')
 
         self.assertEqual(len(root), 2)
-        self.assertEqual(root.keys(), ['a', 'b'])
+        self.assertEqual(sorted(root.keys()), ['a', 'b'])
         self.assertEqual(list(iter(root)), ['a', 'b'])
         self.assertEqual(list(root.values()), [a, b])
         self.assertEqual(list(root.items()), [('a', a), ('b', b)])
@@ -104,7 +104,7 @@ class ChurroTests(unittest.TestCase):
         self.assertEqual(list(root.values()), [root['a'], root['b']])
         self.assertEqual(list(root.items()), [
             ('a', root['a']), ('b', root['b'])])
-        self.assertEqual(root.keys(), ['a', 'b'])
+        self.assertEqual(sorted(root.keys()), ['a', 'b'])
         self.assertEqual(list(iter(root)), ['a', 'b'])
         self.assertTrue(bool(root))
         self.assertIn('a', root)
