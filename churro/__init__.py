@@ -181,7 +181,7 @@ class Persistent(PersistentBase):
     _fs = None
 
     def __new__(cls, *args, **kw):
-        obj = super(Persistent, cls).__new__(cls, *args, **kw)
+        obj = super(Persistent, cls).__new__(cls)
         obj.__instance__ = obj
         return obj
 
