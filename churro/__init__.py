@@ -32,7 +32,8 @@ class Churro(object):
 
        A callable that returns the root database object to be stored as the
        root when creating a new database.  The default factory returns an
-       instance of `churro.PersistentFolder`.
+       instance of `churro.PersistentFolder`.  This has no effect if the
+       repository has already been created.
 
     ``create``
 
@@ -64,6 +65,10 @@ class Churro(object):
         return self.session
 
     def root(self):
+        """
+        Gets the root folder of the repository.  This is the starting point for
+        traversing to other objects in the repository.
+        """
         return self._session().get_root(self.factory)
 
 
@@ -175,6 +180,11 @@ class PersistentProperty(object):
 
 
 class Persistent(PersistentBase):
+    """
+    This is the base class from which all persistent classes for `Churro` must
+    be derived.  Only objects which are instances of a class derived from
+    `Persistent` may be stored in a `Churro` repository.
+    """
     _dirty = True
     __name__ = None
     __parent__ = None
@@ -193,7 +203,15 @@ class Persistent(PersistentBase):
 
 
 class PersistentFolder(Persistent):
-
+    """
+    Classes which derive from this class are not only persistent in `Churro` but
+    have dict-like properties allowing them to contain children which are
+    other persistent objects or folders.  Storing an instance of
+    `PersistentFolder` in a `Churro` repository, creates a folder in the
+    underlying filesystem, in which child objects are stored.  Instances of
+    `PersistentFolder` are dict-like and are interacted with in the same way as
+    standard Python dictionaries.
+    """
     @reify
     def _contents(self):
         contents = {}
@@ -221,16 +239,28 @@ class PersistentFolder(Persistent):
                 in self._contents.items() if obj is not _removed])
 
     def keys(self):
+        """
+        Returns the names of child objects.
+        """
         return self._filtered_contents.keys()
 
     def values(self):
+        """
+        Returns an iterator over child objects.
+        """
         for name, value in self.items():
             yield value
 
     def __iter__(self):
+        """
+        Returns an iterator over child names.
+        """
         return iter(self._filtered_contents.keys())
 
     def items(self):
+        """
+        Returns an iterator over (child object's name, child object) tuples.
+        """
         contents = self._filtered_contents
         for name, (type, obj) in contents.items():
             if obj is None:
@@ -238,18 +268,32 @@ class PersistentFolder(Persistent):
             yield name, obj
 
     def __len__(self):
+        """
+        Returns the number of children.
+        """
         return len(self._filtered_contents)
 
     def __nonzero__(self):
+        """
+        Returns boolean indicating whether folder has any children.
+        """
         return bool(self._filtered_contents)
 
     def __getitem__(self, name):
+        """
+        Retreives the child object of the given name.  Raises `KeyError` if the
+        child is not found.
+        """
         obj = self.get(name, _marker)
         if obj is _marker:
             raise KeyError(name)
         return obj
 
     def get(self, name, default=None):
+        """
+        Returns the child object of the given name.  Returns `default` if the
+        child is not found.
+        """
         contents = self._filtered_contents
         objref = contents.get(name)
         if not objref:
@@ -259,24 +303,19 @@ class PersistentFolder(Persistent):
             obj = self._load(name, type)
         return obj
 
-    def _load(self, name, type, cache=True):
-        if type == 'folder':
-            fspath = resource_path(self, name, CHURRO_FOLDER)
-        else:
-            fspath = resource_path(self, name) + CHURRO_EXT
-        obj = codec.decode(self._fs.open(fspath, DECODE_MODE))
-        obj.__parent__ = self
-        obj.__name__ = name
-        obj._fs = self._fs
-        obj._dirty = False
-        if cache:
-            self._contents[name] = (type, obj)
-        return obj
-
     def __contains__(self, name):
+        """
+        Returns boolean indicating whether a child with the given name exists
+        in the folder.
+        """
         return name in self.keys()
 
     def __setitem__(self, name, other):
+        """
+        Adds a child to the folder with the given name.  If there is already
+        another child with the same name in the folder, that child is
+        overwritten.
+        """
         type = 'folder' if isinstance(other, PersistentFolder) else 'object'
         self._contents[name] = (type, other)
         other.__parent__ = self
@@ -285,6 +324,10 @@ class PersistentFolder(Persistent):
         _set_dirty(other)
 
     def __delitem__(self, name):
+        """
+        Removes the child with the given name from  the folder.  Raises
+        `KeyError` if there is no child with the given name.
+        """
         if not self._remove(name):
             raise KeyError(name)
 
@@ -312,6 +355,20 @@ class PersistentFolder(Persistent):
             contents[name] = (type, _removed)
             _set_dirty(self)
         return objref
+
+    def _load(self, name, type, cache=True):
+        if type == 'folder':
+            fspath = resource_path(self, name, CHURRO_FOLDER)
+        else:
+            fspath = resource_path(self, name) + CHURRO_EXT
+        obj = codec.decode(self._fs.open(fspath, DECODE_MODE))
+        obj.__parent__ = self
+        obj.__name__ = name
+        obj._fs = self._fs
+        obj._dirty = False
+        if cache:
+            self._contents[name] = (type, obj)
+        return obj
 
     def _save(self):
         fs = self._fs
