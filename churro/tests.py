@@ -212,6 +212,48 @@ class ChurroTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             transaction.commit()
 
+    def test_save_and_retrieve_one_object_with_dates(self):
+        import datetime
+        dob = datetime.date(1975, 7, 7)
+        dtob = datetime.datetime(2010, 5, 12, 2, 42)
+        repo = self.make_one()
+        root = repo.root()
+        self.assertEqual(repo.root(), root)
+        obj = TestClassWithDateProperties(dob, dtob)
+        root['test'] = obj
+        self.assertIs(root['test'], obj)
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.three, dob)
+        self.assertEqual(obj.four, dtob )
+        obj.four = dtob = datetime.datetime(2010, 5, 15, 20, 36)
+        self.assertEqual(obj.four, dtob)
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.four, dtob)
+        obj.three = None
+        obj.four = None
+        self.assertEqual(obj.three, None)
+        self.assertEqual(obj.four, None)
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.three, None)
+        self.assertEqual(obj.four, None)
+
+        with self.assertRaises(ValueError):
+            obj.three = 'foo'
+        with self.assertRaises(ValueError):
+            obj.four = 'bar'
+
 
 class TestDottedNameResolver(unittest.TestCase):
 
@@ -232,6 +274,15 @@ class TestClass(churro.Persistent):
     def __init__(self, one, two):
         self.one = one
         self.two = two
+
+
+class TestClassWithDateProperties(TestClass):
+    three = churro.PersistentDate()
+    four = churro.PersistentDatetime()
+
+    def __init__(self, three, four):
+        self.three = three
+        self.four = four
 
 
 class TestFolder(churro.PersistentFolder, TestClass):

@@ -1,4 +1,5 @@
 import acidfs
+import datetime
 import json
 import sys
 import transaction
@@ -153,6 +154,7 @@ PersistentBase = PersistentType('PersistentBase', (object,), {})
 
 
 class PersistentProperty(object):
+    default = None
 
     def set_name(self, name):
         self.attr = '.' + name
@@ -160,7 +162,7 @@ class PersistentProperty(object):
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
-        return getattr(obj, self.attr)
+        return getattr(obj, self.attr, self.default)
 
     def __set__(self, obj, value, set_dirty=True):
         if set_dirty:
@@ -176,6 +178,47 @@ class PersistentProperty(object):
         return value
 
     def validate(self, value):
+        return value
+
+
+class PersistentDate(PersistentProperty):
+
+    def from_json(self, value):
+        if value:
+            return datetime.date(*map(int, value.split('-')))
+        return value
+
+    def to_json(self, value):
+        if value:
+            return '%s-%s-%s' % (value.year, value.month, value.day)
+        return value
+
+    def validate(self, value):
+        if value is not None and not isinstance(value, datetime.date):
+            raise ValueError("%s is not an instance of datetime.date")
+        return value
+
+
+class PersistentDatetime(PersistentProperty):
+
+    def from_json(self, value):
+        if value:
+            d, t = value.split('T')
+            year, month, day = map(int, d.split('-'))
+            hour, minute, second = map(int, t.split(':'))
+            return datetime.datetime(year, month, day, hour, minute, second)
+        return value
+
+    def to_json(self, value):
+        if value:
+            return '%04d-%02d-%02dT%02d:%02d:%02d' % (
+                value.year, value.month, value.day, value.hour, value.minute,
+                value.second)
+        return value
+
+    def validate(self, value):
+        if value is not None and not isinstance(value, datetime.datetime):
+            raise ValueError("%s is not an instance of datetime.datetime")
         return value
 
 
