@@ -321,10 +321,6 @@ class TestDictWrapper(CollectionWrappersTestBase):
                 self.has_been_mutated = True
         self.o = Derived({1: 2, 3: 4})
 
-    def test__cmp__(self):
-        self.assertEqual(cmp(self.o, {1: 2, 3: 4}), 0)
-        self.assertNotMutated()
-
     def test__contains__(self):
         self.assertTrue(1 in self.o)
         self.assertNotMutated()
@@ -334,16 +330,8 @@ class TestDictWrapper(CollectionWrappersTestBase):
         self.assertEqual(self.o, {3: 4})
         self.assertMutated()
 
-    def test__ge__(self):
-        self.assertTrue(self.o >= {1: 2, 3: 4})
-        self.assertNotMutated()
-
     def test__getitem__(self):
         self.assertEqual(self.o[1], 2)
-        self.assertNotMutated()
-
-    def test__gt__(self):
-        self.assertFalse(self.o > {1: 2, 3: 4})
         self.assertNotMutated()
 
     def test__hash__(self):
@@ -355,16 +343,8 @@ class TestDictWrapper(CollectionWrappersTestBase):
         self.assertEqual(sorted(iter(self.o)), [1, 3])
         self.assertNotMutated()
 
-    def test__le__(self):
-        self.assertTrue(self.o <= {1: 2, 3: 4})
-        self.assertNotMutated()
-
     def test__len__(self):
         self.assertEqual(len(self.o), 2)
-        self.assertNotMutated()
-
-    def test__lt__(self):
-        self.assertFalse(self.o < {1: 2, 3: 4})
         self.assertNotMutated()
 
     def test__ne__(self):
@@ -398,24 +378,8 @@ class TestDictWrapper(CollectionWrappersTestBase):
         self.assertEqual(self.o.get(5, 6), 6)
         self.assertNotMutated()
 
-    def test_has_key(self):
-        self.assertTrue(self.o.has_key(1))
-        self.assertNotMutated()
-
     def test_items(self):
-        self.assertEqual(self.o.items(), [(1, 2), (3, 4)])
-        self.assertNotMutated()
-
-    def test_iteritems(self):
-        self.assertEqual(sorted(self.o.iteritems()), [(1, 2), (3, 4)])
-        self.assertNotMutated()
-
-    def test_iterkeys(self):
-        self.assertEqual(sorted(self.o.iterkeys()), [1, 3])
-        self.assertNotMutated()
-
-    def test_itervalues(self):
-        self.assertEqual(sorted(self.o.itervalues()), [2, 4])
+        self.assertEqual(sorted(self.o.items()), [(1, 2), (3, 4)])
         self.assertNotMutated()
 
     def test_keys(self):
@@ -447,18 +411,6 @@ class TestDictWrapper(CollectionWrappersTestBase):
         self.assertEqual(sorted(self.o.values()), [2, 4])
         self.assertNotMutated()
 
-    def test_viewitems(self):
-        self.assertEqual(sorted(self.o.viewitems()), [(1, 2), (3, 4)])
-        self.assertNotMutated()
-
-    def test_viewkeys(self):
-        self.assertEqual(sorted(self.o.viewkeys()), [1, 3])
-        self.assertNotMutated()
-
-    def test_viewvalues(self):
-        self.assertEqual(sorted(self.o.viewvalues()), [2, 4])
-        self.assertNotMutated()
-
 
 class TestListWrapper(CollectionWrappersTestBase):
 
@@ -484,20 +436,12 @@ class TestListWrapper(CollectionWrappersTestBase):
         self.assertEqual(self.o, [1, 2, 1])
         self.assertMutated()
 
-    def test__ge__(self):
-        self.assertTrue(self.o >= [1, 2, 3, 2, 1])
-        self.assertNotMutated()
-
     def test__getitem__(self):
         self.assertEqual(self.o[1], 2)
         self.assertNotMutated()
 
     def test__getslice__(self):
         self.assertEqual(self.o[1:3], [2, 3])
-        self.assertNotMutated()
-
-    def test__gt__(self):
-        self.assertFalse(self.o > [1, 2, 3, 2, 1])
         self.assertNotMutated()
 
     def test__hash__(self):
@@ -519,16 +463,8 @@ class TestListWrapper(CollectionWrappersTestBase):
         self.assertEqual(list(iter(self.o)), [1, 2, 3, 2, 1])
         self.assertNotMutated()
 
-    def test__le__(self):
-        self.assertTrue(self.o <= [1, 2, 3, 2, 1])
-        self.assertNotMutated()
-
     def test__len__(self):
         self.assertEqual(len(self.o), 5)
-        self.assertNotMutated()
-
-    def test__lt__(self):
-        self.assertFalse(self.o < [1, 2, 3, 2, 1])
         self.assertNotMutated()
 
     def test__mul__(self):

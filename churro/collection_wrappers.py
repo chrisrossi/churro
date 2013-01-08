@@ -4,9 +4,6 @@ class DictWrapper(object):
     def __init__(self, *args):
         self.data = dict(*args)
 
-    def __cmp__(self, other):
-        return self.data.__cmp__(self._cast(other))
-
     def __contains__(self, key):
         return self.data.__contains__(key)
 
@@ -17,14 +14,8 @@ class DictWrapper(object):
     def __eq__(self, other):
         return self.data.__eq__(self._cast(other))
 
-    def __ge__(self, other):
-        return self.data.__ge__(self._cast(other))
-
     def __getitem__(self, key):
         return self.data.__getitem__(key)
-
-    def __gt__(self, other):
-        return self.data.__gt__(self._cast(other))
 
     def __hash__(self):
         return self.data.__hash__()
@@ -32,14 +23,8 @@ class DictWrapper(object):
     def __iter__(self):
         return self.data.__iter__()
 
-    def __le__(self, other):
-        return self.data.__le__(self._cast(other))
-
     def __len__(self):
         return self.data.__len__()
-
-    def __lt__(self, other):
-        return self.data.__lt__(self._cast(other))
 
     def __ne__(self, other):
         return self.data.__ne__(self._cast(other))
@@ -63,20 +48,8 @@ class DictWrapper(object):
     def get(self, *args):
         return self.data.get(*args)
 
-    def has_key(self, key):
-        return self.data.has_key(key)
-
     def items(self):
         return self.data.items()
-
-    def iteritems(self):
-        return self.data.iteritems()
-
-    def iterkeys(self):
-        return self.data.iterkeys()
-
-    def itervalues(self):
-        return self.data.itervalues()
 
     def keys(self):
         return self.data.keys()
@@ -99,15 +72,6 @@ class DictWrapper(object):
 
     def values(self):
         return self.data.values()
-
-    def viewitems(self):
-        return self.data.viewitems()
-
-    def viewkeys(self):
-        return self.data.viewkeys()
-
-    def viewvalues(self):
-        return self.data.viewvalues()
 
     def mutated(self): #pragma no cover
         pass
@@ -137,17 +101,11 @@ class ListWrapper(object):
     def __eq__(self, other):
         return self.data.__eq__(other)
 
-    def __ge__(self, other):
-        return self.data.__ge__(other)
-
     def __getitem__(self, index):
         return self.data.__getitem__(index)
 
     def __getslice__(self, start, end):
         return self.data.__getslice__(start, end)
-
-    def __gt__(self, other):
-        return self.data.__gt__(other)
 
     def __hash__(self):
         return self.data.__hash__()
@@ -161,14 +119,8 @@ class ListWrapper(object):
     def __iter__(self):
         return self.data.__iter__()
 
-    def __le__(self, other):
-        return self.data.__le__(other)
-
     def __len__(self):
         return self.data.__len__()
-
-    def __lt__(self, other):
-        return self.data.__lt__(other)
 
     def __mul__(self, other):
         return self.data.__mul__(other)
