@@ -254,6 +254,37 @@ class ChurroTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             obj.four = 'bar'
 
+    def test_persistent_dict_and_list(self):
+        repo = self.make_one()
+        root = repo.root()
+        obj = TestClass(
+            churro.PersistentDict({'one': 1, 'two': 2}),
+            churro.PersistentList([1, 2]))
+        root['test'] = obj
+        self.assertEqual(obj.one['one'], 1)
+        self.assertEqual(obj.two[0], 1)
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        obj.one['one'] = 'one'
+        self.assertEqual(obj.one['one'], 'one')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.one['one'], 'one')
+        obj.two[0] = 'one'
+        self.assertEqual(obj.two[0], 'one')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.two[0], 'one')
+
 
 class TestDottedNameResolver(unittest.TestCase):
 
@@ -265,6 +296,312 @@ class TestDottedNameResolver(unittest.TestCase):
         C = self.call_fut('email.message.Message')
         from email.message import Message
         self.assertEqual(C, Message)
+
+
+class CollectionWrappersTestBase(unittest.TestCase):
+
+    def assertNewEq(self, orig, one, two):
+        assert one is not orig
+        self.assertEqual(one, two)
+
+    def assertMutated(self):
+        self.assertTrue(self.o.has_been_mutated)
+
+    def assertNotMutated(self):
+        self.assertFalse(self.o.has_been_mutated)
+
+
+class TestDictWrapper(CollectionWrappersTestBase):
+
+    def setUp(self):
+        from churro.collection_wrappers import DictWrapper
+        class Derived(DictWrapper):
+            has_been_mutated = False
+            def mutated(self):
+                self.has_been_mutated = True
+        self.o = Derived({1: 2, 3: 4})
+
+    def test__cmp__(self):
+        self.assertEqual(cmp(self.o, {1: 2, 3: 4}), 0)
+        self.assertNotMutated()
+
+    def test__contains__(self):
+        self.assertTrue(1 in self.o)
+        self.assertNotMutated()
+
+    def test__delitem__(self):
+        del self.o[1]
+        self.assertEqual(self.o, {3: 4})
+        self.assertMutated()
+
+    def test__ge__(self):
+        self.assertTrue(self.o >= {1: 2, 3: 4})
+        self.assertNotMutated()
+
+    def test__getitem__(self):
+        self.assertEqual(self.o[1], 2)
+        self.assertNotMutated()
+
+    def test__gt__(self):
+        self.assertFalse(self.o > {1: 2, 3: 4})
+        self.assertNotMutated()
+
+    def test__hash__(self):
+        with self.assertRaises(TypeError):
+            hash(self.o)
+        self.assertNotMutated()
+
+    def test__iter__(self):
+        self.assertEqual(sorted(iter(self.o)), [1, 3])
+        self.assertNotMutated()
+
+    def test__le__(self):
+        self.assertTrue(self.o <= {1: 2, 3: 4})
+        self.assertNotMutated()
+
+    def test__len__(self):
+        self.assertEqual(len(self.o), 2)
+        self.assertNotMutated()
+
+    def test__lt__(self):
+        self.assertFalse(self.o < {1: 2, 3: 4})
+        self.assertNotMutated()
+
+    def test__ne__(self):
+        self.assertFalse(self.o != {1: 2, 3: 4})
+        self.assertNotMutated()
+
+    def test__repr__(self):
+        self.assertEqual(repr(self.o), 'Derived({1: 2, 3: 4})')
+        self.assertNotMutated()
+
+    def test__setitem__(self):
+        self.o[5] = 6
+        self.assertEqual(self.o[5], 6)
+        self.assertMutated()
+
+    def test_clear(self):
+        self.o.clear()
+        self.assertEqual(self.o, {})
+        self.assertMutated()
+
+    def test_copy(self):
+        from churro.collection_wrappers import DictWrapper
+        other = self.o.copy()
+        self.assertNewEq(self.o, other, self.o)
+        self.assertIsInstance(other, DictWrapper)
+        self.assertNotMutated()
+
+    def test_get(self):
+        self.assertEqual(self.o.get(1), 2)
+        self.assertEqual(self.o.get(5), None)
+        self.assertEqual(self.o.get(5, 6), 6)
+        self.assertNotMutated()
+
+    def test_has_key(self):
+        self.assertTrue(self.o.has_key(1))
+        self.assertNotMutated()
+
+    def test_items(self):
+        self.assertEqual(self.o.items(), [(1, 2), (3, 4)])
+        self.assertNotMutated()
+
+    def test_iteritems(self):
+        self.assertEqual(sorted(self.o.iteritems()), [(1, 2), (3, 4)])
+        self.assertNotMutated()
+
+    def test_iterkeys(self):
+        self.assertEqual(sorted(self.o.iterkeys()), [1, 3])
+        self.assertNotMutated()
+
+    def test_itervalues(self):
+        self.assertEqual(sorted(self.o.itervalues()), [2, 4])
+        self.assertNotMutated()
+
+    def test_keys(self):
+        self.assertEqual(sorted(self.o.keys()), [1, 3])
+        self.assertNotMutated()
+
+    def test_pop(self):
+        self.assertEqual(self.o.pop(1), 2)
+        self.assertEqual(self.o, {3: 4})
+        self.assertMutated()
+
+    def test_popitem(self):
+        self.assertEqual(self.o.popitem(), (1, 2)) # brittle!
+        self.assertEqual(self.o, {3: 4})
+        self.assertMutated()
+
+    def test_setdefault(self):
+        self.assertEqual(self.o.setdefault(1, 42), 2)
+        self.assertEqual(self.o.setdefault(5, 6), 6)
+        self.assertEqual(self.o, {1: 2, 3: 4, 5: 6})
+        self.assertMutated()
+
+    def test_update(self):
+        self.o.update({3: 42, 5: 6})
+        self.assertEqual(self.o, {1: 2, 3: 42, 5: 6})
+        self.assertMutated()
+
+    def test_values(self):
+        self.assertEqual(sorted(self.o.values()), [2, 4])
+        self.assertNotMutated()
+
+    def test_viewitems(self):
+        self.assertEqual(sorted(self.o.viewitems()), [(1, 2), (3, 4)])
+        self.assertNotMutated()
+
+    def test_viewkeys(self):
+        self.assertEqual(sorted(self.o.viewkeys()), [1, 3])
+        self.assertNotMutated()
+
+    def test_viewvalues(self):
+        self.assertEqual(sorted(self.o.viewvalues()), [2, 4])
+        self.assertNotMutated()
+
+
+class TestListWrapper(CollectionWrappersTestBase):
+
+    def setUp(self):
+        from churro.collection_wrappers import ListWrapper
+        class Derived(ListWrapper):
+            has_been_mutated = False
+            def mutated(self):
+                self.has_been_mutated = True
+        self.o = Derived([1, 2, 3, 2, 1])
+
+    def test__contains__(self):
+        self.assertTrue(2 in self.o)
+        self.assertNotMutated()
+
+    def test__delitem__(self):
+        del self.o[1]
+        self.assertEqual(self.o, [1, 3, 2, 1])
+        self.assertMutated()
+
+    def test__delslice__(self):
+        del self.o[1:3]
+        self.assertEqual(self.o, [1, 2, 1])
+        self.assertMutated()
+
+    def test__ge__(self):
+        self.assertTrue(self.o >= [1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__getitem__(self):
+        self.assertEqual(self.o[1], 2)
+        self.assertNotMutated()
+
+    def test__getslice__(self):
+        self.assertEqual(self.o[1:3], [2, 3])
+        self.assertNotMutated()
+
+    def test__gt__(self):
+        self.assertFalse(self.o > [1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__hash__(self):
+        with self.assertRaises(TypeError):
+            hash(self.o)
+        self.assertNotMutated()
+
+    def test__iadd__(self):
+        self.o += [4, 5]
+        self.assertEqual(self.o, [1, 2, 3, 2, 1, 4, 5])
+        self.assertNotMutated()
+
+    def test__imul__(self):
+        self.o *= 2
+        self.assertEqual(self.o, [1, 2, 3, 2, 1, 1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__iter__(self):
+        self.assertEqual(list(iter(self.o)), [1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__le__(self):
+        self.assertTrue(self.o <= [1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__len__(self):
+        self.assertEqual(len(self.o), 5)
+        self.assertNotMutated()
+
+    def test__lt__(self):
+        self.assertFalse(self.o < [1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__mul__(self):
+        self.assertEqual(self.o * 2, [1, 2, 3, 2, 1, 1, 2, 3, 2, 1])
+        self.assertEqual(self.o, [1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__ne__(self):
+        self.assertFalse(self.o != [1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__repr__(self):
+        self.assertEqual(repr(self.o), 'Derived([1, 2, 3, 2, 1])')
+        self.assertNotMutated()
+
+    def test__rmul__(self):
+        self.assertEqual(2 * self.o, [1, 2, 3, 2, 1, 1, 2, 3, 2, 1])
+        self.assertEqual(self.o, [1, 2, 3, 2, 1])
+        self.assertNotMutated()
+
+    def test__setitem__(self):
+        self.o[2] = 6
+        self.assertEqual(self.o, [1, 2, 6, 2, 1])
+        self.assertMutated()
+
+    def test__setslice__(self):
+        self.o[2:4] = [7, 8, 9]
+        self.assertEqual(self.o, [1, 2, 7, 8 , 9, 1])
+        self.assertMutated()
+
+    def test_append(self):
+        self.o.append(6)
+        self.assertEqual(self.o, [1, 2, 3, 2, 1, 6])
+        self.assertMutated()
+
+    def test_count(self):
+        self.assertEqual(self.o.count(2), 2)
+        self.assertNotMutated()
+
+    def test_extend(self):
+        self.o.extend([6, 7])
+        self.assertEqual(self.o, [1, 2, 3, 2, 1, 6, 7])
+        self.assertMutated()
+
+    def test_index(self):
+        self.assertEqual(self.o.index(3), 2)
+        self.assertNotMutated()
+
+    def test_insert(self):
+        self.o.insert(0, 0)
+        self.assertEqual(self.o, [0, 1, 2, 3, 2, 1])
+        self.assertMutated()
+
+    def test_pop(self):
+        self.assertEqual(self.o.pop(0), 1)
+        self.assertEqual(self.o, [2, 3, 2, 1])
+        self.assertMutated()
+
+    def test_remove(self):
+        self.o.remove(3)
+        self.assertEqual(self.o, [1, 2, 2, 1])
+        self.assertMutated()
+
+    def test_reverse(self):
+        del self.o[0]
+        self.o.reverse()
+        self.assertEqual(self.o, [1, 2, 3, 2])
+        self.assertMutated()
+
+    def test_sort(self):
+        self.o.sort()
+        self.assertEqual(self.o, [1, 1, 2, 2, 3])
+        self.assertMutated()
 
 
 class TestClass(churro.Persistent):

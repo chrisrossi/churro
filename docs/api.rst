@@ -12,3 +12,12 @@ API Reference
      
   .. autoclass:: PersistentFolder
      :members:
+
+  .. autoclass:: PersistentProperty
+     :members:
+
+  .. autoclass:: PersistentDate
+     :members:
+
+  .. autoclass:: PersistentDatetime
+     :members:

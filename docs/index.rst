@@ -12,6 +12,9 @@ JSON, a universally understood and human readable text file format, insures that
 data stored by `Churro` is portable to other applications and platforms across
 space and time.
 
+In addition to these docs, it couldn't hurt to look over the `AcidFS 
+documentation <http://acidfs.readthedocs.org/>`_.
+
 Contents
 ========
 
@@ -19,6 +22,7 @@ Contents
     :maxdepth: 2
 
     quickstart
+    properties
     api
 
 Indices and tables

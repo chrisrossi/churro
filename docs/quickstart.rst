@@ -2,6 +2,13 @@
 Getting Started Quickly
 =======================
 
+You can use `Churro` if you only read this page.  Some topics are covered 
+more thoroughly later, but thorough discussion is not required to start using
+`Churro` now.  
+
+Defining Persistent Types
+-------------------------
+
 In order for an object to be saved in a `Churro` repository, it must inherit 
 from :class:`Persistent <churro.Persistent>` or 
 :class:`PersistentFolder <churro.PersistentFolder>`.  Attributes of your 
@@ -28,8 +35,14 @@ address book.  We might write some code that looks like this::
             self.name = name
             self.address = address
 
+
 You can see that defining your persistent types is pretty straightforward.  Next
-you'll want to open a repository and start storing some data::
+you'll want to open a repository and start storing some data.
+
+Adding Objects to the Repository
+--------------------------------
+
+::
 
     from churro import Churro
 
@@ -49,6 +62,9 @@ initialized.  Otherwise an existing repository will be opened.  The call to
 the starting point for traversing to any other objects in the repository.  From
 there, adding data to the repository is as easy as instantiating data objects 
 using folders as Python dicts.
+
+Committing a Transaction
+------------------------
 
 So far no data has actually been stored yet.  You'll need to commit a 
 transaction::

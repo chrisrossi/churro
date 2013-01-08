@@ -4,6 +4,9 @@ import json
 import sys
 import transaction
 
+from .collection_wrappers import DictWrapper
+from .collection_wrappers import ListWrapper
+
 CHURRO_EXT = '.churro'
 CHURRO_FOLDER = '__folder__' + CHURRO_EXT
 
@@ -154,6 +157,12 @@ PersistentBase = PersistentType('PersistentBase', (object,), {})
 
 
 class PersistentProperty(object):
+    """
+    The base type for all persistent properties.  This property type can handle
+    any data type as a value that is serializable natively to JSON.  Other types
+    are implemented by extending this class and overriding the `from_json`,
+    `to_json`, and `validate` methods.
+    """
     default = None
 
     def set_name(self, name):
@@ -172,16 +181,31 @@ class PersistentProperty(object):
         return setattr(obj, self.attr, self.validate(value))
 
     def from_json(self, value):
+        """
+        Converts a value from its JSON representation to a Python object.
+        """
         return value
 
     def to_json(self, value):
+        """
+        Converts a value from a Python object to an object that can be
+        serialized as JSON.
+        """
         return value
 
     def validate(self, value):
+        """
+        Used at assignment time to validate a value.  If a value is not of the
+        proper type and cannot be converted to the proper type, a `ValueError`
+        is raised, otherwise the valua is returned, including any transformation
+        or coercion that has been performed."""
         return value
 
 
 class PersistentDate(PersistentProperty):
+    """
+    A persistent attribute type that can store instances of `datetime.date`.
+    """
 
     def from_json(self, value):
         if value:
@@ -200,6 +224,9 @@ class PersistentDate(PersistentProperty):
 
 
 class PersistentDatetime(PersistentProperty):
+    """
+    A persistent attribute type that can store instances of `datetime.datetime`.
+    """
 
     def from_json(self, value):
         if value:
@@ -439,6 +466,20 @@ class PersistentFolder(Persistent):
 
     #def __repr__(self):
     #    pass
+
+
+class PersistentDict(DictWrapper, Persistent):
+    data = PersistentProperty()
+
+    def mutated(self):
+        self.set_dirty()
+
+
+class PersistentList(ListWrapper, Persistent):
+    data = PersistentProperty()
+
+    def mutated(self):
+        self.set_dirty()
 
 
 class _Session(object):
