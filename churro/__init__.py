@@ -266,6 +266,15 @@ class Persistent(PersistentBase):
         return obj
 
     def set_dirty(self):
+        """
+        Calling this method alerts `Churro` that this object is `dirty` and
+        should be persisted at commit time.  It is usually not necesary to call
+        this method from application code, since `Churro` tries to detect
+        object mutation whenever possible.  You may need to call this method
+        from your application code, however, if you use mutable data structures
+        that are not themselves `Persistent` as values of persistent properties,
+        as `Churro` has no way of detecting mutations to those structures.
+        """
         node = self.__instance__
         while node is not None:
             node._dirty = True
@@ -469,6 +478,13 @@ class PersistentFolder(Persistent):
 
 
 class PersistentDict(DictWrapper, Persistent):
+    """
+    A `PersistentDict` is a Python `dict` work alike that marks its parent
+    object as `dirty` whenever it is mutated, solving the problem of using
+    mutable datastructures as values for persistent properties with `Churro`
+    and eliminating the need to call :meth:`~churro.Persistent.set_dirty`
+    in application code when updating the dictionary.
+    """
     data = PersistentProperty()
 
     def mutated(self):
@@ -476,6 +492,13 @@ class PersistentDict(DictWrapper, Persistent):
 
 
 class PersistentList(ListWrapper, Persistent):
+    """
+    A `PersistentList` is a Python `dict` work alike that marks its parent
+    object as `dirty` whenever it is mutated, solving the problem of using
+    mutable datastructures as values for persistent properties with `Churro`
+    and eliminating the need to call :meth:`~churro.Persistent.set_dirty`
+    in application code when updating the list.
+    """
     data = PersistentProperty()
 
     def mutated(self):
