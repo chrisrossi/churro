@@ -177,7 +177,7 @@ class PersistentProperty(object):
         if set_dirty:
             obj.set_dirty()
         if isinstance(value, Persistent):
-            value.__instance__ = obj.__instance__
+            value.__setinstance__(obj.__instance__)
         return setattr(obj, self.attr, self.validate(value))
 
     def from_json(self, value):
@@ -264,6 +264,9 @@ class Persistent(PersistentBase):
         obj = super(Persistent, cls).__new__(cls)
         obj.__instance__ = obj
         return obj
+
+    def __setinstance__(self, instance):
+        self.__instance__ = instance
 
     def set_dirty(self):
         """
@@ -490,6 +493,11 @@ class PersistentDict(DictWrapper, Persistent):
     def mutated(self):
         self.set_dirty()
 
+    def __setinstance__(self, instance):
+        self.__instance__ = instance
+        for obj in self.data.values():
+            if isinstance(obj, Persistent):
+                obj.__setinstance__(self.__instance__)
 
 class PersistentList(ListWrapper, Persistent):
     """
@@ -503,6 +511,12 @@ class PersistentList(ListWrapper, Persistent):
 
     def mutated(self):
         self.set_dirty()
+
+    def __setinstance__(self, instance):
+        self.__instance__ = instance
+        for obj in self.data:
+            if isinstance(obj, Persistent):
+                obj.__setinstance__(self.__instance__)
 
 
 class _Session(object):

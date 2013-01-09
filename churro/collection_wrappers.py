@@ -63,7 +63,8 @@ class DictWrapper(object):
         return self.data.popitem()
 
     def setdefault(self, key, value):
-        self.mutated()
+        if key not in self.data:
+            self.mutated()
         return self.data.setdefault(key, value)
 
     def update(self, mapping):

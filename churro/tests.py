@@ -285,6 +285,50 @@ class ChurroTests(unittest.TestCase):
         obj = root['test']
         self.assertEqual(obj.two[0], 'one')
 
+    def test_deep_structure_with_persistent_dict(self):
+        repo = self.make_one()
+        root = repo.root()
+        obj = TestClass(churro.PersistentDict(), None)
+        obj.one['foo'] = TestClass('bar', 'baz')
+        root['test'] = obj
+        self.assertEqual(obj.one['foo'].one, 'bar')
+        self.assertEqual(obj.one['foo'].two, 'baz')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        obj.one['foo'].two = 'bathsalts'
+        self.assertEqual(obj.one['foo'].two, 'bathsalts')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.one['foo'].two, 'bathsalts')
+
+    def test_deep_structure_with_persistent_list(self):
+        repo = self.make_one()
+        root = repo.root()
+        obj = TestClass(churro.PersistentList(), None)
+        obj.one.append(TestClass('bar', 'baz'))
+        root['test'] = obj
+        self.assertEqual(obj.one[0].one, 'bar')
+        self.assertEqual(obj.one[0].two, 'baz')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        obj.one[0].two = 'bathsalts'
+        self.assertEqual(obj.one[0].two, 'bathsalts')
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.one[0].two, 'bathsalts')
+
 
 class TestDottedNameResolver(unittest.TestCase):
 
