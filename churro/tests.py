@@ -90,7 +90,7 @@ class ChurroTests(unittest.TestCase):
 
         self.assertEqual(len(root), 2)
         self.assertEqual(sorted(root.keys()), ['a', 'b'])
-        self.assertEqual(list(iter(root)), ['a', 'b'])
+        self.assertEqual(sorted(iter(root)), ['a', 'b'])
         self.assertEqual(list(root.values()), [a, b])
         self.assertEqual(list(root.items()), [('a', a), ('b', b)])
         self.assertTrue(bool(root))
