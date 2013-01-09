@@ -19,10 +19,10 @@ Defining Persistent Types
 =========================
 
 In order for an object to be saved in a `Churro` repository, it must inherit 
-from :class:`Persistent <churro.Persistent>` or 
-:class:`PersistentFolder <churro.PersistentFolder>`.  Attributes of your 
+from :class:`~churro.Persistent` or 
+:class:`~churro.PersistentFolder`.  Attributes of your 
 persistent objects that you want to be persisted must be derived from 
-:class:`PersistentProperty`.  Probably the best way to illustrate is by 
+:class:`~churro.PersistentProperty`.  Probably the best way to illustrate is by 
 example, so let's say you're writing an application that saves contacts in an 
 address book.  We might write some code that looks like this::
 
