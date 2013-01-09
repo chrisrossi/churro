@@ -3,12 +3,12 @@ from setuptools import setup
 from setuptools import find_packages
 import sys
 
-VERSION = '1.0dev'
+VERSION = '1.0a1'
 
 requires = [
     'acidfs',
 ]
-tests_require = requires + ['mock']
+tests_require = requires + []
 
 if sys.version < '2.7':
     tests_require += ['unittest2']
@@ -18,8 +18,8 @@ doc_extras = ['Sphinx']
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
-    README = '' #open(os.path.join(here, 'README.rst')).read()
-    CHANGES = '' #open(os.path.join(here, 'CHANGES.txt')).read()
+    README = open(os.path.join(here, 'README.rst')).read()
+    CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 except IOError:
     README = CHANGES = ''
 
@@ -28,7 +28,7 @@ setup(name='churro',
       description='Simple object persistence using JSON and AcidFS.',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Programming Language :: Python",
         "Programming Language :: Python :: 2.6",
@@ -40,7 +40,7 @@ setup(name='churro',
         "Topic :: Database",
         "License :: Repoze Public License",
         ],
-      keywords='json persistence',
+      keywords='json persistence acidfs',
       author="Chris Rossi",
       author_email="pylons-discuss@googlegroups.com",
       url="http://pylonsproject.org",
