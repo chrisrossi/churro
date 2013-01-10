@@ -119,7 +119,7 @@ if 'sphinx-build' in ' '.join(sys.argv): # protect against dumb importers
 sys.path.append(os.path.abspath('_themes'))
 html_theme_path = ['_themes']
 html_theme = 'pylons'
-html_theme_options = dict(github_url='https://github.com/chrisrossi/churro')
+html_theme_options = dict(github_url='https://github.com/Pylons/churro')
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
