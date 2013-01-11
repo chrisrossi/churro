@@ -283,6 +283,28 @@ class Persistent(PersistentBase):
             node._dirty = True
             node = getattr(node, '__parent__', None)
 
+    def deactivate(self):
+        """
+        Calling this method on a persistent object detaches that object, and
+        its children, from the in memory persistent object tree, potentially
+        allowing it to be garbage collected if there are no other references to
+        the object.
+        """
+        # If this method is called on a nested object, we can't really detach
+        # the nested object by itself, but we can detach the top level instance.
+        instance = self.__instance__
+
+        # Only the root node will not have a parent folder.
+        folder = instance.__parent__
+        if folder is None:
+            # Can't really deatch root, just silently ignore
+            return
+
+        type = 'folder' if isinstance(instance, PersistentFolder) else 'object'
+        if instance._dirty:
+            folder._save()
+        folder._contents[instance.__name__] = (type, None)
+
 
 class PersistentFolder(Persistent):
     """

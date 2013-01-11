@@ -329,6 +329,32 @@ class ChurroTests(unittest.TestCase):
         obj = root['test']
         self.assertEqual(obj.one[0].two, 'bathsalts')
 
+    def test_deactivate(self):
+        repo = self.make_one()
+        root = repo.root()
+        root.deactivate()
+        obj = TestClass('foo', TestClass('bar', 'baz'))
+        root['test'] = obj
+        obj.deactivate()
+        self.assertIs(root._contents['test'][1], None)
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.one, 'foo')
+        self.assertEqual(obj.two.one, 'bar')
+        self.assertEqual(obj.two.two, 'baz')
+        obj.two.deactivate()
+        self.assertIs(root._contents['test'][1], None)
+        root['test'].two.two = 'dos'
+        transaction.commit()
+
+        repo = self.make_one()
+        root = repo.root()
+        obj = root['test']
+        self.assertEqual(obj.two.two, 'dos')
+
 
 class TestDottedNameResolver(unittest.TestCase):
 
