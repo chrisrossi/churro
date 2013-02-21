@@ -302,7 +302,10 @@ class Persistent(PersistentBase):
 
         type = 'folder' if isinstance(instance, PersistentFolder) else 'object'
         if instance._dirty:
-            folder._save()
+            node = instance
+            while node._fs is None:
+                node = node.__parent__
+            folder._save(node._fs)
         folder._contents[instance.__name__] = (type, None)
 
 
@@ -323,8 +326,6 @@ class PersistentFolder(Persistent):
         if fs is None:
             return contents
         path = resource_path(self)
-        if not fs.exists(path):
-            return contents
         with fs.cd(path):
             for fname in fs.listdir():
                 if fname == CHURRO_FOLDER:
@@ -424,7 +425,6 @@ class PersistentFolder(Persistent):
         self._contents[name] = (type, other)
         other.__parent__ = self
         other.__name__ = name
-        other._fs = self._fs
         _set_dirty(other)
 
     def __delitem__(self, name):
@@ -474,8 +474,7 @@ class PersistentFolder(Persistent):
             self._contents[name] = (type, obj)
         return obj
 
-    def _save(self):
-        fs = self._fs
+    def _save(self, fs):
         path = resource_path(self)
         if not fs.exists(path):
             fs.mkdir(path)
@@ -486,7 +485,7 @@ class PersistentFolder(Persistent):
                 if obj is _removed:
                     fs.rmtree(resource_path(self, name))
                 else:
-                    obj._save()
+                    obj._save(fs)
             else:
                 fspath = resource_path(self, name) + CHURRO_EXT
                 if obj is _removed:
@@ -576,7 +575,7 @@ class _Session(object):
             # Nothing to do
             return
 
-        root._save()
+        root._save(self.fs)
 
     def tpc_finish(self, tx):
         """
