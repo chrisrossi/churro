@@ -75,6 +75,13 @@ class Churro(object):
         """
         return self._session().get_root(self.factory)
 
+    def flush(self):
+        """
+        Writes any unsaved data to the underlying `AcidFS` filesystem without
+        committing the transaction.
+        """
+        self._session().flush()
+
 
 _marker = object()
 _removed = object()
@@ -475,6 +482,7 @@ class PersistentFolder(Persistent):
         return obj
 
     def _save(self, fs):
+        self._fs = fs
         path = resource_path(self)
         if not fs.exists(path):
             fs.mkdir(path)
@@ -493,6 +501,7 @@ class PersistentFolder(Persistent):
                 else:
                     codec.encode(obj, fs.open(fspath, ENCODE_MODE))
                     obj._dirty = False
+                    obj._fs = fs
         fspath = '%s/%s' % (path, CHURRO_FOLDER)
         codec.encode(self, fs.open(fspath, ENCODE_MODE))
         self._dirty = False
@@ -570,6 +579,9 @@ class _Session(object):
         """
         Part of datamanager API.
         """
+        self.flush()
+
+    def flush(self):
         root = self.root
         if root is None or not root._dirty:
             # Nothing to do

@@ -35,6 +35,9 @@ class ChurroTests(unittest.TestCase):
         obj = TestClass('foo', 'bar')
         root['test'] = obj
         self.assertIs(root['test'], obj)
+        self.assertFalse(repo.fs.exists('test.churro'))
+        repo.flush()
+        self.assertTrue(repo.fs.exists('test.churro'))
         transaction.commit()
 
         repo = self.make_one()
